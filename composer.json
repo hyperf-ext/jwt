@@ -1,0 +1,67 @@
+{
+    "name": "hyperf-ext/jwt",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "php",
+        "hyperf",
+        "auth",
+        "jwt"
+    ],
+    "description": "The Hyperf JWT package.",
+    "authors": [
+        {
+            "name": "Eric Zhu",
+            "email": "eric@zhu.email"
+        },
+        {
+            "name": "Sean Tymon",
+            "email": "tymon148@gmail.com",
+            "homepage": "https://tymon.xyz",
+            "role": "Developer"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "HyperfExt\\Jwt\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "HyperfTest\\": "tests"
+        }
+    },
+    "require": {
+        "php": ">=7.2",
+        "ext-swoole": ">=4.5",
+        "ext-json": "*",
+        "ext-openssl": "*",
+        "hyperf/cache": "^2.0",
+        "hyperf/command": "^2.0",
+        "hyperf/config": "^2.0",
+        "hyperf/di": "^2.0",
+        "hyperf/framework": "^2.0",
+        "lcobucci/jwt": "^3.2",
+        "nesbot/carbon": "^2.0"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^2.14",
+        "hyperf/testing": "^2.0",
+        "phpstan/phpstan": "^0.12",
+        "swoole/ide-helper": "dev-master",
+        "mockery/mockery": "^1.0"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "scripts": {
+        "test": "co-phpunit -c phpunit.xml --colors=always",
+        "analyse": "phpstan analyse --memory-limit 1024M -l 0 ./src",
+        "cs-fix": "php-cs-fixer fix $1"
+    },
+    "extra": {
+        "hyperf": {
+            "config": "HyperfExt\\Jwt\\ConfigProvider"
+        }
+    }
+}
