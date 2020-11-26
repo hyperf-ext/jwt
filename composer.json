@@ -41,7 +41,7 @@
         "hyperf/config": "^2.0",
         "hyperf/di": "^2.0",
         "hyperf/framework": "^2.0",
-        "lcobucci/jwt": "^3.2",
+        "lcobucci/jwt": "~3.3.0",
         "nesbot/carbon": "^2.0"
     },
     "require-dev": {
