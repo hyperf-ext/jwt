@@ -106,7 +106,7 @@ class Jwt
         return $this->token = $this->manager
             ->refresh($this->token, $forceForever, array_merge(
                 $this->getCustomClaims(),
-                ($prv = $this->getPayload()->get('prv')) ? ['prv' => $prv] : []
+                ($prv = $this->getPayload(true)->get('prv')) ? ['prv' => $prv] : []
             ))
             ->get();
     }
@@ -172,7 +172,7 @@ class Jwt
     /**
      * Parse the token from the request.
      *
-     *@throws \HyperfExt\Jwt\Exceptions\JwtException
+     * @throws \HyperfExt\Jwt\Exceptions\JwtException
      * @return $this
      */
     public function parseToken()
@@ -188,11 +188,11 @@ class Jwt
      * Get the raw Payload instance.
      * @throws \HyperfExt\Jwt\Exceptions\JwtException
      */
-    public function getPayload(): Payload
+    public function getPayload(bool $ignoreExpired = false): Payload
     {
         $this->requireToken();
 
-        return $this->manager->decode($this->token);
+        return $this->manager->decode($this->token, true, $ignoreExpired);
     }
 
     /**
