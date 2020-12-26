@@ -133,7 +133,7 @@ class Manager implements ManagerInterface
 
         return call_user_func(
             [$this->blacklist, $forceForever ? 'addForever' : 'add'],
-            $this->decode($token, false)
+            $this->decode($token, false, true)
         );
     }
 
