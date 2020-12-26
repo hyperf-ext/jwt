@@ -111,7 +111,7 @@ class Manager implements ManagerInterface
 
         if ($this->blacklistEnabled) {
             // Invalidate old token
-            $this->invalidate($token, $forceForever, true);
+            $this->invalidate($token, $forceForever);
         }
 
         $claims = array_merge($claims, $customClaims);
@@ -125,7 +125,7 @@ class Manager implements ManagerInterface
      *
      * @throws \HyperfExt\Jwt\Exceptions\JwtException
      */
-    public function invalidate(Token $token, bool $forceForever = false, bool $ignoreExpired = false): bool
+    public function invalidate(Token $token, bool $forceForever = false): bool
     {
         if (! $this->blacklistEnabled) {
             throw new JwtException('You must have the blacklist enabled to invalidate a token.');
@@ -133,7 +133,7 @@ class Manager implements ManagerInterface
 
         return call_user_func(
             [$this->blacklist, $forceForever ? 'addForever' : 'add'],
-            $this->decode($token, false, $ignoreExpired)
+            $this->decode($token, false, true)
         );
     }
 
