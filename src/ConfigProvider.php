@@ -40,7 +40,7 @@ class ConfigProvider
             'publish' => [
                 [
                     'id' => 'config',
-                    'description' => 'The config for HyperfExt\\Jwt.',
+                    'description' => 'The config for hyperf-ext/jwt.',
                     'source' => __DIR__ . '/../publish/jwt.php',
                     'destination' => BASE_PATH . '/config/autoload/jwt.php',
                 ],
