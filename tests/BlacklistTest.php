@@ -38,7 +38,7 @@ class BlacklistTest extends AbstractTestCase
      */
     protected $blacklist;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 

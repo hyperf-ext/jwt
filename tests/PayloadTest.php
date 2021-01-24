@@ -33,7 +33,7 @@ class PayloadTest extends AbstractTestCase
      */
     protected $payload;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -74,7 +74,7 @@ class PayloadTest extends AbstractTestCase
     /** @test */
     public function itShouldGetPropertiesOfPayloadViaGetMethod()
     {
-        $this->assertInternalType('array', $this->payload->get());
+        $this->assertIsArray($this->payload->get());
         $this->assertSame($this->payload->get('sub'), 1);
 
         $this->assertSame(

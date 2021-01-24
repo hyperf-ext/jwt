@@ -11,6 +11,7 @@ declare(strict_types=1);
 namespace HyperfExt\Jwt;
 
 use BadMethodCallException;
+use Hyperf\Utils\Context;
 use HyperfExt\Jwt\Contracts\JwtSubjectInterface;
 use HyperfExt\Jwt\Contracts\ManagerInterface;
 use HyperfExt\Jwt\Contracts\RequestParser\RequestParserInterface;
@@ -103,12 +104,16 @@ class Jwt
     {
         $this->requireToken();
 
-        return $this->token = $this->manager
-            ->refresh($this->token, $forceForever, array_merge(
-                $this->getCustomClaims(),
-                ($prv = $this->getPayload(true)->get('prv')) ? ['prv' => $prv] : []
-            ))
-            ->get();
+        $this->setToken(
+            $token = $this->manager
+                ->refresh($this->getToken(), $forceForever, array_merge(
+                    $this->getCustomClaims(),
+                    ($prv = $this->getPayload(true)->get('prv')) ? ['prv' => $prv] : []
+                ))
+                ->get()
+        );
+
+        return $token;
     }
 
     /**
@@ -121,7 +126,7 @@ class Jwt
     {
         $this->requireToken();
 
-        $this->manager->invalidate($this->token, $forceForever);
+        $this->manager->invalidate($this->getToken(), $forceForever);
 
         return $this;
     }
@@ -158,15 +163,15 @@ class Jwt
      */
     public function getToken(): ?Token
     {
-        if ($this->token === null) {
+        if (empty($token = Context::get(Token::class))) {
             try {
                 $this->parseToken();
             } catch (JwtException $e) {
-                $this->token = null;
+                $token = null;
             }
         }
 
-        return $this->token;
+        return $token;
     }
 
     /**
@@ -192,7 +197,7 @@ class Jwt
     {
         $this->requireToken();
 
-        return $this->manager->decode($this->token, true, $ignoreExpired);
+        return $this->manager->decode($this->getToken(), true, $ignoreExpired);
     }
 
     /**
@@ -239,7 +244,7 @@ class Jwt
      */
     public function setToken($token)
     {
-        $this->token = $token instanceof Token ? $token : new Token($token);
+        Context::set(Token::class, $token instanceof Token ? $token : new Token($token));
 
         return $this;
     }
@@ -251,7 +256,7 @@ class Jwt
      */
     public function unsetToken()
     {
-        $this->token = null;
+        Context::destroy(Token::class);
 
         return $this;
     }
@@ -349,7 +354,7 @@ class Jwt
      */
     protected function requireToken()
     {
-        if (! $this->token) {
+        if (! $this->getToken()) {
             throw new JwtException('A token is required');
         }
     }

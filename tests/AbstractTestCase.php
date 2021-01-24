@@ -40,7 +40,7 @@ abstract class AbstractTestCase extends TestCase
      */
     protected $claimFactory;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -51,7 +51,7 @@ abstract class AbstractTestCase extends TestCase
         $this->manager->shouldReceive('getClaimFactory')->andReturn($this->claimFactory = new Factory(3600, 3600 * 24 * 14));
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         Carbon::setTestNow();
         Mockery::close();

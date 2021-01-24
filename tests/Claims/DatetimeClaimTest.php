@@ -36,7 +36,7 @@ class DatetimeClaimTest extends AbstractTestCase
      */
     protected $claimsTimestamp;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 

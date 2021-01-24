@@ -36,7 +36,7 @@ class HyperfCacheTest extends AbstractTestCase
      */
     protected $tag;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 

@@ -35,7 +35,7 @@ class CodecTest extends AbstractTestCase
      */
     protected $builder;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 

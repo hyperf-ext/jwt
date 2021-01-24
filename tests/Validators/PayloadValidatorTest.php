@@ -34,7 +34,7 @@ class PayloadValidatorTest extends AbstractTestCase
      */
     protected $validator;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
