@@ -38,13 +38,6 @@ class Jwt
     protected $request;
 
     /**
-     * The token.
-     *
-     * @var null|\HyperfExt\Jwt\Token
-     */
-    protected $token;
-
-    /**
      * Lock the subject.
      *
      * @var bool
@@ -166,6 +159,7 @@ class Jwt
         if (empty($token = Context::get(Token::class))) {
             try {
                 $this->parseToken();
+                $token = Context::get(Token::class);
             } catch (JwtException $e) {
                 $token = null;
             }
