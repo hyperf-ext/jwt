@@ -17,6 +17,7 @@ use HyperfExt\Jwt\Contracts\CodecInterface;
 use HyperfExt\Jwt\Exceptions\JwtException;
 use HyperfExt\Jwt\Exceptions\TokenInvalidException;
 use Lcobucci\JWT\Builder;
+use Lcobucci\JWT\Configuration;
 use Lcobucci\JWT\Parser;
 use Lcobucci\JWT\Signer;
 use Lcobucci\JWT\Signer\Ecdsa\Sha256 as ES256;
@@ -25,9 +26,12 @@ use Lcobucci\JWT\Signer\Ecdsa\Sha512 as ES512;
 use Lcobucci\JWT\Signer\Hmac\Sha256 as HS256;
 use Lcobucci\JWT\Signer\Hmac\Sha384 as HS384;
 use Lcobucci\JWT\Signer\Hmac\Sha512 as HS512;
+use Lcobucci\JWT\Signer\Key\InMemory;
 use Lcobucci\JWT\Signer\Rsa\Sha256 as RS256;
 use Lcobucci\JWT\Signer\Rsa\Sha384 as RS384;
 use Lcobucci\JWT\Signer\Rsa\Sha512 as RS512;
+use Lcobucci\JWT\Token\RegisteredClaims;
+use Lcobucci\JWT\Validation\Constraint\SignedWith;
 
 class Codec implements CodecInterface
 {
@@ -82,17 +86,45 @@ class Codec implements CodecInterface
     protected $algo;
 
     /**
+     * The Configuration instance.
+     *
+     * @var \Lcobucci\JWT\Configuration
+     */
+    protected $config;
+
+    /**
      * The Signer instance.
      *
      * @var \Lcobucci\JWT\Signer
      */
     protected $signer;
 
-    public function __construct(string $secret, string $algo, array $keys)
+    /**
+     * @param null|\Lcobucci\JWT\Configuration $config
+     *
+     * @throws \HyperfExt\Jwt\Exceptions\JwtException
+     */
+    public function __construct(string $secret, string $algo, array $keys, $config = null)
     {
         $this->secret = $secret;
         $this->algo = $algo;
         $this->keys = $keys;
+        $this->config = $config;
+
+        $this->signer = $this->getSigner();
+
+        if (! is_null($config)) {
+            $this->config = $config;
+        } elseif ($this->isAsymmetric()) {
+            $this->config = Configuration::forAsymmetricSigner($this->signer, $this->getSigningKey(), $this->getVerificationKey());
+        } else {
+            $this->config = Configuration::forSymmetricSigner($this->signer, InMemory::plainText($this->getSecret()));
+        }
+        if (! count($this->config->validationConstraints())) {
+            $this->config->setValidationConstraints(
+                new SignedWith($this->signer, $this->getVerificationKey()),
+            );
+        }
     }
 
     /**
@@ -200,9 +232,9 @@ class Codec implements CodecInterface
 
         try {
             foreach ($payload as $key => $value) {
-                $builder->withClaim($key, $value);
+                $this->addClaim($builder, $key, $value);
             }
-            return (string) $builder->getToken($this->getSigner(), $this->getSigningKey());
+            return $builder->getToken($this->config->signer(), $this->config->signingKey())->toString();
         } catch (Exception $e) {
             throw new JwtException('Could not create token: ' . $e->getMessage(), $e->getCode(), $e);
         }
@@ -223,13 +255,63 @@ class Codec implements CodecInterface
             throw new TokenInvalidException('Could not decode token: ' . $e->getMessage(), $e->getCode(), $e);
         }
 
-        if (! $jwt->verify($this->getSigner(), $this->getVerificationKey())) {
+        if (! $this->config->validator()->validate($jwt, ...$this->config->validationConstraints())) {
             throw new TokenInvalidException('Token Signature could not be verified.');
         }
+        return (new Collection($jwt->claims()->all()))->map(function ($claim) {
+            if (is_a($claim, \DateTimeImmutable::class)) {
+                return $claim->getTimestamp();
+            }
+            if (is_object($claim) && method_exists($claim, 'getValue')) {
+                return $claim->getValue();
+            }
 
-        return (new Collection($jwt->getClaims()))->map(function ($claim) {
-            return is_object($claim) ? $claim->getValue() : $claim;
+            return $claim;
         })->toArray();
+    }
+
+    /**
+     * Gets the {@see $config} attribute.
+     *
+     * @return \Lcobucci\JWT\Configuration
+     */
+    public function getConfig()
+    {
+        return $this->config;
+    }
+
+    /**
+     * Adds a claim to the {@see $config}.
+     *
+     * @param mixed $value
+     */
+    protected function addClaim(Builder $builder, string $key, $value)
+    {
+        switch ($key) {
+            case RegisteredClaims::ID:
+                $builder->identifiedBy((string) $value);
+                break;
+            case RegisteredClaims::EXPIRATION_TIME:
+                $builder->expiresAt(\DateTimeImmutable::createFromFormat('U', (string) $value));
+                break;
+            case RegisteredClaims::NOT_BEFORE:
+                $builder->canOnlyBeUsedAfter(\DateTimeImmutable::createFromFormat('U', (string) $value));
+                break;
+            case RegisteredClaims::ISSUED_AT:
+                $builder->issuedAt(\DateTimeImmutable::createFromFormat('U', (string) $value));
+                break;
+            case RegisteredClaims::ISSUER:
+                $builder->issuedBy((string) $value);
+                break;
+            case RegisteredClaims::AUDIENCE:
+                $builder->permittedFor((string) $value);
+                break;
+            case RegisteredClaims::SUBJECT:
+                $builder->relatedTo((string) $value);
+                break;
+            default:
+                $builder->withClaim($key, $value);
+        }
     }
 
     /**
@@ -255,7 +337,7 @@ class Codec implements CodecInterface
      */
     protected function getBuilder(): Builder
     {
-        return new Builder();
+        return $this->config->builder();
     }
 
     /**
@@ -263,7 +345,7 @@ class Codec implements CodecInterface
      */
     protected function getParser(): Parser
     {
-        return new Parser();
+        return $this->config->parser();
     }
 
     /**
@@ -281,8 +363,8 @@ class Codec implements CodecInterface
     protected function getSigningKey(): Signer\Key
     {
         return $this->isAsymmetric()
-            ? new Signer\Key($this->getPrivateKey(), $this->getPassphrase())
-            : new Signer\Key($this->getSecret());
+            ? InMemory::plainText($this->getPrivateKey(), $this->getPassphrase() ?? '')
+            : InMemory::plainText($this->getSecret());
     }
 
     /**
@@ -291,7 +373,7 @@ class Codec implements CodecInterface
     protected function getVerificationKey(): Signer\Key
     {
         return $this->isAsymmetric()
-            ? new Signer\Key($this->getPublicKey())
-            : new Signer\Key($this->getSecret());
+            ? InMemory::plainText($this->getPublicKey())
+            : InMemory::plainText($this->getSecret());
     }
 }

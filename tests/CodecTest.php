@@ -10,13 +10,20 @@ declare(strict_types=1);
  */
 namespace HyperfTest;
 
+use Exception;
 use HyperfExt\Jwt\Codec;
 use HyperfExt\Jwt\Exceptions\JwtException;
 use HyperfExt\Jwt\Exceptions\TokenInvalidException;
 use InvalidArgumentException;
 use Lcobucci\JWT\Builder;
 use Lcobucci\JWT\Parser;
+use Lcobucci\JWT\Signer;
+use Lcobucci\JWT\Signer\Key;
+use Lcobucci\JWT\Signer\Rsa\Sha256 as RS256;
 use Lcobucci\JWT\Token;
+use Lcobucci\JWT\Token\DataSet;
+use Lcobucci\JWT\Validation\Constraint;
+use Lcobucci\JWT\Validator;
 use Mockery;
 
 /**
@@ -35,12 +42,18 @@ class CodecTest extends AbstractTestCase
      */
     protected $builder;
 
+    /**
+     * @var \Mockery\MockInterface
+     */
+    protected $validator;
+
     public function setUp(): void
     {
         parent::setUp();
 
         $this->builder = Mockery::mock(Builder::class);
         $this->parser = Mockery::mock(Parser::class);
+        $this->validator = Mockery::mock(Validator::class);
     }
 
     /** @test */
@@ -66,24 +79,41 @@ class CodecTest extends AbstractTestCase
     {
         $payload = ['sub' => 1, 'exp' => $this->testNowTimestamp + 3600, 'iat' => $this->testNowTimestamp, 'iss' => '/foo'];
 
-        $this->builder->shouldReceive('withClaim')->times(count($payload));
-        $this->builder->shouldReceive('getToken')->once()->andReturn('foo.bar.baz');
-        $this->builder->shouldReceive('sign')->never();
+        $dataSet = new DataSet($payload, 'payload');
 
+        $this->builder->shouldReceive('relatedTo')->once()->andReturnSelf(); // sub
+        $this->builder->shouldReceive('expiresAt')->once()->andReturnSelf(); // exp
+        $this->builder->shouldReceive('issuedAt')->once()->andReturnSelf();  // iat
+        $this->builder->shouldReceive('issuedBy')->once()->andReturnSelf();  // iss
+        $this->builder
+            ->shouldReceive('getToken')
+            ->once()
+            ->with(\Mockery::type(Signer::class), \Mockery::type(Key::class))
+            ->andReturn(new Token\Plain(new DataSet([], 'header'), $dataSet, (new Token\Signature('', 'signature'))));
+
+        /** @var Token $token */
         $token = $this->getCodec('secret', 'HS256')->encode($payload);
 
-        $this->assertSame('foo.bar.baz', $token);
+        $this->assertSame('header.payload.signature', $token);
     }
 
     /** @test */
     public function itShouldThrowAnInvalidExceptionWhenThePayloadCouldNotBeEncoded()
     {
+        $this->expectException(JWTException::class);
         $this->expectExceptionMessage('Could not create token:');
-        $this->expectException(JwtException::class);
+
         $payload = ['sub' => 1, 'exp' => $this->testNowTimestamp, 'iat' => $this->testNowTimestamp, 'iss' => '/foo'];
 
-        $this->builder->shouldReceive('withClaim')->times(count($payload));
-        $this->builder->shouldReceive('sign')->never();
+        $this->builder->shouldReceive('relatedTo')->once()->andReturnSelf(); // sub
+        $this->builder->shouldReceive('expiresAt')->once()->andReturnSelf(); // exp
+        $this->builder->shouldReceive('issuedAt')->once()->andReturnSelf();  // iat
+        $this->builder->shouldReceive('issuedBy')->once()->andReturnSelf();  // iss
+        $this->builder
+            ->shouldReceive('getToken')
+            ->once()
+            ->with(\Mockery::type(Signer::class), \Mockery::type(Key::class))
+            ->andThrow(new Exception());
 
         $this->getCodec('secret', 'HS256')->encode($payload);
     }
@@ -93,33 +123,44 @@ class CodecTest extends AbstractTestCase
     {
         $payload = ['sub' => 1, 'exp' => $this->testNowTimestamp + 3600, 'iat' => $this->testNowTimestamp, 'iss' => '/foo'];
 
-        $jwt = Mockery::mock(Token::class);
-        $jwt->shouldReceive('verify')->once()->with(Mockery::any(), Mockery::any())->andReturn(true);
-        $jwt->shouldReceive('getClaims')->once()->andReturn($payload);
-        $this->parser->shouldReceive('parse')->once()->with('foo.bar.baz')->andReturn($jwt);
+        $token = Mockery::mock(Token::class);
+        $dataSet = Mockery::mock(new DataSet($payload, 'payload'));
 
-        $this->assertSame($payload, $this->getCodec('secret', 'HS256')->decode('foo.bar.baz'));
+        $codec = $this->getCodec('secret', 'HS256');
+
+        $this->parser->shouldReceive('parse')->once()->with('foo.bar.baz')->andReturn($token);
+        $this->validator->shouldReceive('validate')->once()->with($token, Mockery::any())->andReturnTrue();
+        $token->shouldReceive('claims')->once()->andReturn($dataSet);
+        $dataSet->shouldReceive('all')->once()->andReturn($payload);
+
+        $this->assertSame($payload, $codec->decode('foo.bar.baz'));
     }
 
     /** @test */
     public function itShouldThrowATokenInvalidExceptionWhenTheTokenCouldNotBeDecodedDueToABadSignature()
     {
+        $token = Mockery::mock(Token::class);
+        $dataSet = Mockery::mock(new DataSet(['pay', 'load'], 'payload'));
+
+        $codec = $this->getCodec('secret', 'HS256');
+
         $this->expectException(TokenInvalidException::class);
         $this->expectExceptionMessage('Token Signature could not be verified.');
 
-        $jwt = Mockery::mock(Token::class);
-        $jwt->shouldReceive('verify')->once()->with(Mockery::any(), Mockery::any())->andReturn(false);
-        $jwt->shouldReceive('getClaims')->never();
-        $this->parser->shouldReceive('parse')->once()->with('foo.bar.baz')->andReturn(Mockery::self());
+        $this->parser->shouldReceive('parse')->once()->with('foo.bar.baz')->andReturn($token);
+        $this->validator->shouldReceive('validate')->once()->with($token, Mockery::any())->andReturnFalse();
+        $token->shouldReceive('claims')->never();
+        $dataSet->shouldReceive('all')->never();
 
-        $this->getCodec('secret', 'HS256')->decode('foo.bar.baz');
+        $codec->decode('foo.bar.baz');
     }
 
     /** @test */
     public function itShouldThrowATokenInvalidExceptionWhenTheTokenCouldNotBeDecoded()
     {
-        $this->expectExceptionMessage('Could not decode token:');
         $this->expectException(TokenInvalidException::class);
+        $this->expectExceptionMessage('Could not decode token:');
+
         $this->parser->shouldReceive('parse')->once()->with('foo.bar.baz')->andThrow(new InvalidArgumentException());
         $this->parser->shouldReceive('verify')->never();
         $this->parser->shouldReceive('getClaims')->never();
@@ -130,30 +171,41 @@ class CodecTest extends AbstractTestCase
     /** @test */
     public function itShouldGenerateATokenWhenUsingAnRsaAlgorithm()
     {
+        $dummyPrivateKey = $this->getDummyPrivateKey();
+        $dummyPublicKey = $this->getDummyPublicKey();
+
         $codec = $this->getCodec(
             'does_not_matter',
             'RS256',
-            ['private' => $this->getDummyPrivateKey(), 'public' => $this->getDummyPublicKey()]
+            ['private' => $dummyPrivateKey, 'public' => $dummyPublicKey]
         );
 
         $payload = ['sub' => 1, 'exp' => $this->testNowTimestamp + 3600, 'iat' => $this->testNowTimestamp, 'iss' => '/foo'];
 
-        $this->builder->shouldReceive('withClaim')->times(count($payload));
-        $this->builder->shouldReceive('getToken')->once()->andReturn('foo.bar.baz');
+        $dataSet = new DataSet($payload, 'payload');
+
+        $this->builder->shouldReceive('relatedTo')->once()->andReturnSelf(); // sub
+        $this->builder->shouldReceive('expiresAt')->once()->andReturnSelf(); // exp
+        $this->builder->shouldReceive('issuedAt')->once()->andReturnSelf();  // iat
+        $this->builder->shouldReceive('issuedBy')->once()->andReturnSelf();  // iss
+        $this->builder
+            ->shouldReceive('getToken')
+            ->once()
+            ->with(Mockery::type(RS256::class), Mockery::type(Key::class))
+            ->andReturn(new Token\Plain(new DataSet([], 'header'), $dataSet, (new Token\Signature('', 'signature'))));
 
         $token = $codec->encode($payload);
 
-        $this->assertSame('foo.bar.baz', $token);
+        $this->assertSame('header.payload.signature', $token);
     }
 
     /** @test */
     public function itShouldThrowAExceptionWhenTheAlgorithmPassedIsInvalid()
     {
-        $this->expectException(JwtException::class);
+        $this->expectException(JWTException::class);
         $this->expectExceptionMessage('The given algorithm could not be found');
 
-        $jwt = Mockery::mock(Token::class);
-        $this->parser->shouldReceive('parse')->andReturn($jwt);
+        $this->parser->shouldReceive('parse')->never();
         $this->parser->shouldReceive('verify')->never();
 
         $this->getCodec('secret', 'AlgorithmWrong')->decode('foo.bar.baz');
@@ -195,12 +247,19 @@ class CodecTest extends AbstractTestCase
      */
     public function getCodec($secret, $algo, array $keys = [])
     {
-        $codec = $this->getMockBuilder(Codec::class)
-            ->setMethods(['getBuilder', 'getParser'])
-            ->setConstructorArgs([$secret, $algo, $keys])
-            ->getMock();
-        $codec->method('getBuilder')->willReturn($this->builder);
-        $codec->method('getParser')->willReturn($this->parser);
+        $codec = new Codec($secret, $algo, $keys);
+        $config = Mockery::mock($codec->getConfig());
+
+        $codec = new Codec($secret, $algo, $keys, $config);
+
+        $config->shouldReceive('builder')->andReturn($this->builder);
+        $config->shouldReceive('parser')->andReturn($this->parser);
+        $config->shouldReceive('validator')->andReturn($this->validator);
+
+        $constraint = Mockery::mock(Constraint::class);
+        $constraint->shouldReceive('assert')->andReturn();
+        $config->shouldReceive('validationConstraints')->andReturn([$constraint]);
+
         return $codec;
     }
 

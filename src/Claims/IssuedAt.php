@@ -40,8 +40,7 @@ class IssuedAt extends AbstractClaim
         }
 
         if (
-            ($refreshTtl = $this->getFactory()->getRefreshTtl()) !== null and
-            $this->isPast($value + $refreshTtl)
+            ($refreshTtl = $this->getFactory()->getRefreshTtl()) !== null && $this->isPast($value + $refreshTtl)
         ) {
             throw new TokenExpiredException('Token has expired and can no longer be refreshed');
         }
