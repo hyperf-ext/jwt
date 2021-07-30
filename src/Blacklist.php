@@ -45,7 +45,7 @@ class Blacklist
     /**
      * Constructor.
      */
-    public function __construct(StorageInterface $storage, int $gracePeriod, int $refreshTtl)
+    public function __construct(StorageInterface $storage, int $gracePeriod, ?int $refreshTtl)
     {
         $this->storage = $storage;
         $this->gracePeriod = $gracePeriod;
