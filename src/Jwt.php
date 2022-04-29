@@ -11,6 +11,8 @@ declare(strict_types=1);
 namespace HyperfExt\Jwt;
 
 use BadMethodCallException;
+use Hyperf\Contract\ConfigInterface;
+use Hyperf\Utils\ApplicationContext;
 use Hyperf\Utils\Context;
 use HyperfExt\Jwt\Contracts\JwtSubjectInterface;
 use HyperfExt\Jwt\Contracts\ManagerInterface;
@@ -132,7 +134,11 @@ class Jwt
      */
     public function checkOrFail(): Payload
     {
-        return $this->getPayload();
+		$config = ApplicationContext::getContainer()->get(ConfigInterface::class)->get('jwt');
+		if($config['ttl'] === null){
+			return $this->getPayload(true);
+		}
+		return $this->getPayload();
     }
 
     /**
@@ -190,7 +196,6 @@ class Jwt
     public function getPayload(bool $ignoreExpired = false): Payload
     {
         $this->requireToken();
-
         return $this->manager->decode($this->getToken(), true, $ignoreExpired);
     }
 

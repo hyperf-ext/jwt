@@ -10,41 +10,45 @@ declare(strict_types=1);
  */
 namespace HyperfExt\Jwt\Claims;
 
+use Hyperf\Contract\ConfigInterface;
+use Hyperf\Utils\ApplicationContext;
 use HyperfExt\Jwt\Exceptions\InvalidClaimException;
 use HyperfExt\Jwt\Exceptions\TokenExpiredException;
 use HyperfExt\Jwt\Exceptions\TokenInvalidException;
 
 class IssuedAt extends AbstractClaim
 {
-    use DatetimeTrait {
-        validateCreate as commonValidateCreate;
-    }
+	use DatetimeTrait {
+		validateCreate as commonValidateCreate;
+	}
 
-    protected $name = 'iat';
+	protected $name = 'iat';
 
-    public function validateCreate($value)
-    {
-        $this->commonValidateCreate($value);
+	public function validateCreate($value)
+	{
+		$this->commonValidateCreate($value);
 
-        if ($this->isFuture($value)) {
-            throw new InvalidClaimException($this);
-        }
+		if ($this->isFuture($value)) {
+			throw new InvalidClaimException($this);
+		}
 
-        return $value;
-    }
+		return $value;
+	}
 
-    public function validate(bool $ignoreExpired = false): bool
-    {
-        if ($this->isFuture($value = $this->getValue())) {
-            throw new TokenInvalidException('Issued At (iat) timestamp cannot be in the future');
-        }
+	public function validate(bool $ignoreExpired = false): bool
+	{
+		if ($this->isFuture($value = $this->getValue())) {
+			throw new TokenInvalidException('Issued At (iat) timestamp cannot be in the future');
+		}
 
-        if (
-            ($refreshTtl = $this->getFactory()->getRefreshTtl()) !== null && $this->isPast($value + $refreshTtl)
-        ) {
-            throw new TokenExpiredException('Token has expired and can no longer be refreshed');
-        }
+		$config = ApplicationContext::getContainer()->get(ConfigInterface::class)->get('jwt');
 
-        return true;
-    }
+		if (
+			($refreshTtl = $this->getFactory()->getRefreshTtl()) !== null && $this->isPast($value + $refreshTtl) && $config['ttl'] !== null
+		) {
+			throw new TokenExpiredException('Token has expired and can no longer be refreshed');
+		}
+
+		return true;
+	}
 }
