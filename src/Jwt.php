@@ -134,11 +134,11 @@ class Jwt
      */
     public function checkOrFail(): Payload
     {
-		$config = ApplicationContext::getContainer()->get(ConfigInterface::class)->get('jwt');
-		if($config['ttl'] === null){
-			return $this->getPayload(true);
-		}
-		return $this->getPayload();
+        $config = ApplicationContext::getContainer()->get(ConfigInterface::class)->get('jwt');
+        if ($config['ttl'] === null) {
+            return $this->getPayload(true);
+        }
+        return $this->getPayload();
     }
 
     /**

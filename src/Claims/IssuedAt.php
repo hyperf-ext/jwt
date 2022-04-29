@@ -18,37 +18,37 @@ use HyperfExt\Jwt\Exceptions\TokenInvalidException;
 
 class IssuedAt extends AbstractClaim
 {
-	use DatetimeTrait {
-		validateCreate as commonValidateCreate;
-	}
+    use DatetimeTrait {
+        validateCreate as commonValidateCreate;
+    }
 
-	protected $name = 'iat';
+    protected $name = 'iat';
 
-	public function validateCreate($value)
-	{
-		$this->commonValidateCreate($value);
+    public function validateCreate($value)
+    {
+        $this->commonValidateCreate($value);
 
-		if ($this->isFuture($value)) {
-			throw new InvalidClaimException($this);
-		}
+        if ($this->isFuture($value)) {
+            throw new InvalidClaimException($this);
+        }
 
-		return $value;
-	}
+        return $value;
+    }
 
-	public function validate(bool $ignoreExpired = false): bool
-	{
-		if ($this->isFuture($value = $this->getValue())) {
-			throw new TokenInvalidException('Issued At (iat) timestamp cannot be in the future');
-		}
+    public function validate(bool $ignoreExpired = false): bool
+    {
+        if ($this->isFuture($value = $this->getValue())) {
+            throw new TokenInvalidException('Issued At (iat) timestamp cannot be in the future');
+        }
 
-		$config = ApplicationContext::getContainer()->get(ConfigInterface::class)->get('jwt');
+        $config = ApplicationContext::getContainer()->get(ConfigInterface::class)->get('jwt');
 
-		if (
-			($refreshTtl = $this->getFactory()->getRefreshTtl()) !== null && $this->isPast($value + $refreshTtl) && $config['ttl'] !== null
-		) {
-			throw new TokenExpiredException('Token has expired and can no longer be refreshed');
-		}
+        if (
+            ($refreshTtl = $this->getFactory()->getRefreshTtl()) !== null && $this->isPast($value + $refreshTtl) && $config['ttl'] !== null
+        ) {
+            throw new TokenExpiredException('Token has expired and can no longer be refreshed');
+        }
 
-		return true;
-	}
+        return true;
+    }
 }
