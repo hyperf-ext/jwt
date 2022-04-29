@@ -76,7 +76,7 @@ class PayloadFactory
      *
      * @return $this
      */
-    public function setTtl(int $ttl)
+    public function setTtl(?int $ttl)
     {
         $this->claimFactory->setTtl($ttl);
 
