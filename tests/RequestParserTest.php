@@ -14,7 +14,7 @@ use FastRoute\Dispatcher;
 use Hyperf\HttpMessage\Server\Request;
 use Hyperf\HttpServer\Request as HttpServerRequest;
 use Hyperf\HttpServer\Router\Dispatched;
-use Hyperf\Utils\Context;
+use Hyperf\Context\Context;
 use HyperfExt\Jwt\RequestParser\Handlers\AuthHeaders;
 use HyperfExt\Jwt\RequestParser\Handlers\Cookies;
 use HyperfExt\Jwt\RequestParser\Handlers\InputSource;

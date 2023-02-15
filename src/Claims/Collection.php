@@ -56,7 +56,7 @@ class Collection extends HyperfCollection
      */
     public function hasAllClaims($claims): bool
     {
-        return count($claims) and (new static($claims))->diff($this->keys())->isEmpty();
+        return count($claims) and (new self($claims))->diff($this->keys())->isEmpty();
     }
 
     /**

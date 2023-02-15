@@ -21,7 +21,7 @@ abstract class AbstractGenCommand extends HyperfCommand
      */
     protected $config;
 
-    protected $description;
+    protected string $description;
 
     public function __construct(ConfigInterface $config)
     {
