@@ -11,7 +11,7 @@ declare(strict_types=1);
 namespace HyperfExt\Jwt;
 
 use BadMethodCallException;
-use Hyperf\Utils\Context;
+use Hyperf\Context\Context;
 use HyperfExt\Jwt\Contracts\JwtSubjectInterface;
 use HyperfExt\Jwt\Contracts\ManagerInterface;
 use HyperfExt\Jwt\Contracts\RequestParser\RequestParserInterface;

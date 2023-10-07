@@ -14,9 +14,9 @@ use Hyperf\Utils\Str;
 
 class GenJwtKeypairCommand extends AbstractGenCommand
 {
-    protected $name = 'gen:jwt-keypair';
+    protected ?string $name = 'gen:jwt-keypair';
 
-    protected $description = 'Set the JWT private key and public key used to sign the tokens';
+    protected string $description = 'Set the JWT private key and public key used to sign the tokens';
 
     protected $configs = [
         'RS256' => ['private_key_type' => OPENSSL_KEYTYPE_RSA, 'digest_alg' => 'SHA256', 'private_key_bits' => 4096],

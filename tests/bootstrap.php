@@ -10,14 +10,13 @@ declare(strict_types=1);
  */
 use Hyperf\Config\Config;
 use Hyperf\Contract\ConfigInterface;
-use Hyperf\Di\Annotation\AnnotationReader;
 use Hyperf\Di\ClassLoader;
 use Hyperf\Di\Container;
 use Hyperf\Di\Definition\DefinitionSourceFactory;
 use Hyperf\HttpMessage\Server\Request;
 use Hyperf\HttpServer\Request as HttpServerRequest;
 use Hyperf\Utils\ApplicationContext;
-use Hyperf\Utils\Context;
+use Hyperf\Context\Context;
 use HyperfExt\Jwt\Contracts\PayloadValidatorInterface;
 use HyperfExt\Jwt\Contracts\TokenValidatorInterface;
 use HyperfExt\Jwt\Validators\PayloadValidator;
@@ -30,8 +29,6 @@ use Psr\Http\Message\ServerRequestInterface;
 Swoole\Runtime::enableCoroutine(true);
 
 require_once dirname(dirname(__FILE__)) . '/vendor/autoload.php';
-
-AnnotationReader::addGlobalIgnoredName('mixin');
 
 ClassLoader::init();
 

@@ -15,8 +15,8 @@ use BadMethodCallException;
 use Countable;
 use Hyperf\Utils\ApplicationContext;
 use Hyperf\Utils\Arr;
-use Hyperf\Utils\Contracts\Arrayable;
-use Hyperf\Utils\Contracts\Jsonable;
+use Hyperf\Contract\Arrayable;
+use Hyperf\Contract\Jsonable;
 use HyperfExt\Jwt\Claims\AbstractClaim;
 use HyperfExt\Jwt\Claims\Collection;
 use HyperfExt\Jwt\Contracts\PayloadValidatorInterface;
@@ -196,7 +196,7 @@ class Payload implements ArrayAccess, Arrayable, Countable, Jsonable, JsonSerial
      *
      * @param mixed $key
      */
-    public function offsetExists($key): bool
+    public function offsetExists(mixed $key): bool
     {
         return Arr::has($this->toArray(), $key);
     }
@@ -208,7 +208,7 @@ class Payload implements ArrayAccess, Arrayable, Countable, Jsonable, JsonSerial
      *
      * @return mixed
      */
-    public function offsetGet($key)
+    public function offsetGet(mixed $key): mixed
     {
         return Arr::get($this->toArray(), $key);
     }
@@ -221,7 +221,7 @@ class Payload implements ArrayAccess, Arrayable, Countable, Jsonable, JsonSerial
      *
      * @throws \HyperfExt\Jwt\Exceptions\PayloadException
      */
-    public function offsetSet($key, $value)
+    public function offsetSet(mixed $key, mixed $value): void
     {
         throw new PayloadException('The payload is immutable');
     }
@@ -233,7 +233,7 @@ class Payload implements ArrayAccess, Arrayable, Countable, Jsonable, JsonSerial
      *
      * @throws \HyperfExt\Jwt\Exceptions\PayloadException
      */
-    public function offsetUnset($key)
+    public function offsetUnset(mixed $key): void
     {
         throw new PayloadException('The payload is immutable');
     }
